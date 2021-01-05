@@ -1,6 +1,8 @@
 /public/build/fonts/glyphicons-*
 /public/build/images/glyphicons-*
 
+/data/database_test.sqlite
+
 ###> symfony/framework-bundle ###
 /.env.local
 /.env.local.php
@@ -27,3 +29,8 @@
 npm-debug.log
 yarn-error.log
 ###< symfony/webpack-encore-bundle ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+.phpunit.result.cache
+###< phpunit/phpunit ###

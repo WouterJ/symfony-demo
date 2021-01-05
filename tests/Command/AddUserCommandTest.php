@@ -12,13 +12,18 @@
 namespace App\Tests\Command;
 
 use App\Command\AddUserCommand;
+use App\Factory\UserFactory;
 use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Test\ResetDatabase;
 
 class AddUserCommandTest extends KernelTestCase
 {
+    use ResetDatabase, Factories;
+
     private $userData = [
         'username' => 'chuck_norris',
         'password' => 'foobar',
@@ -64,7 +69,7 @@ class AddUserCommandTest extends KernelTestCase
     public function testCreateUserInteractive(bool $isAdmin): void
     {
         $this->executeCommand(
-        // these are the arguments (only 1 is passed, the rest are missing)
+            // these are the arguments (only 1 is passed, the rest are missing)
             $isAdmin ? ['--admin' => 1] : [],
             // these are the responses given to the questions asked by the command
             // to get the value of the missing required arguments
@@ -90,15 +95,17 @@ class AddUserCommandTest extends KernelTestCase
      */
     private function assertUserCreated(bool $isAdmin): void
     {
+        UserFactory::repository()->assertExists([
+            'fullName' => $this->userData['full-name'],
+            'username' => $this->userData['username'],
+        ]);
+
+        // @todo return the found object from assertExists() ?
+        $user = UserFactory::repository()->find(['fullName' => $this->userData['full-name'], 'username' => $this->userData['username']])->object();
+
         $container = self::$container;
-
-        /** @var \App\Entity\User $user */
-        $user = $container->get(UserRepository::class)->findOneByEmail($this->userData['email']);
-        $this->assertNotNull($user);
-
-        $this->assertSame($this->userData['full-name'], $user->getFullName());
-        $this->assertSame($this->userData['username'], $user->getUsername());
         $this->assertTrue($container->get('security.password_encoder')->isPasswordValid($user, $this->userData['password']));
+        // @todo for some reason, it doesn't work to add `'roles' => $isAdmin ? ['ROLE_ADMIN'] : ['ROLE_USER']` to the criteria above
         $this->assertSame($isAdmin ? ['ROLE_ADMIN'] : ['ROLE_USER'], $user->getRoles());
     }
 

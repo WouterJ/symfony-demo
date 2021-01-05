@@ -11,9 +11,11 @@
 
 namespace App\Tests\Controller;
 
-use App\Repository\UserRepository;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpFoundation\Response;
+use App\Factory\UserFactory;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Zenstruck\Browser\Test\HasBrowser;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
  * Functional test for the controllers defined inside the UserController used
@@ -30,21 +32,18 @@ use Symfony\Component\HttpFoundation\Response;
  *     $ cd your-symfony-project/
  *     $ ./vendor/bin/phpunit
  */
-class UserControllerTest extends WebTestCase
+class UserControllerTest extends KernelTestCase
 {
+    use ResetDatabase, Factories, HasBrowser;
+
     /**
      * @dataProvider getUrlsForAnonymousUsers
      */
     public function testAccessDeniedForAnonymousUsers(string $httpMethod, string $url): void
     {
-        $client = static::createClient();
-        $client->request($httpMethod, $url);
-
-        $this->assertResponseRedirects(
-            'http://localhost/en/login',
-            Response::HTTP_FOUND,
-            sprintf('The %s secure URL redirects to the login form.', $url)
-        );
+        $this->kernelBrowser()
+            ->request($httpMethod, $url)
+            ->assertOn('http://localhost/en/login');
     }
 
     public function getUrlsForAnonymousUsers(): ?\Generator
@@ -55,45 +54,31 @@ class UserControllerTest extends WebTestCase
 
     public function testEditUser(): void
     {
+        $user = UserFactory::new()->create(['email' => 'jane_admin@symfony.com'])->object();
+
         $newUserEmail = 'admin_jane@symfony.com';
+        $this->kernelBrowser()->actingAs($user)
+            ->visit('/en/profile/edit')
+            ->fillField('Email', $newUserEmail)
+            ->click('Save changes')
+            ->assertOn('/en/profile/edit')
+        ;
 
-        $client = static::createClient([], [
-            'PHP_AUTH_USER' => 'jane_admin',
-            'PHP_AUTH_PW' => 'kitten',
-        ]);
-        $client->request('GET', '/en/profile/edit');
-        $client->submitForm('Save changes', [
-            'user[email]' => $newUserEmail,
-        ]);
-
-        $this->assertResponseRedirects('/en/profile/edit', Response::HTTP_FOUND);
-
-        /** @var \App\Entity\User $user */
-        $user = self::$container->get(UserRepository::class)->findOneByEmail($newUserEmail);
-
-        $this->assertNotNull($user);
-        $this->assertSame($newUserEmail, $user->getEmail());
+        UserFactory::repository()->assertExists(['username' => $user->getUsername(), 'email' => $newUserEmail]);
     }
 
     public function testChangePassword(): void
     {
+        $user = UserFactory::new()->create()->object();
+
         $newUserPassword = 'new-password';
-
-        $client = static::createClient([], [
-            'PHP_AUTH_USER' => 'jane_admin',
-            'PHP_AUTH_PW' => 'kitten',
-        ]);
-        $client->request('GET', '/en/profile/change-password');
-        $client->submitForm('Save changes', [
-            'change_password[currentPassword]' => 'kitten',
-            'change_password[newPassword][first]' => $newUserPassword,
-            'change_password[newPassword][second]' => $newUserPassword,
-        ]);
-
-        $this->assertResponseRedirects(
-            '/en/logout',
-            Response::HTTP_FOUND,
-            'Changing password logout the user.'
-        );
+        $this->kernelBrowser()->actingAs($user)->interceptRedirects()
+            ->visit('/en/profile/change-password')
+            ->fillField('Current password', 'kitten')
+            ->fillField('New password', $newUserPassword)
+            ->fillField('Confirm password', $newUserPassword)
+            ->click('Save changes')
+            ->assertRedirectedTo('/en/logout', 1)
+        ;
     }
 }

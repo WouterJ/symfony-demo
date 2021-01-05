@@ -11,9 +11,11 @@
 
 namespace App\Tests\Controller;
 
-use App\Entity\Post;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpFoundation\Response;
+use App\Factory\PostFactory;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Zenstruck\Browser\Test\HasBrowser;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
  * Functional test that implements a "smoke test" of all the public and secure
@@ -25,8 +27,10 @@ use Symfony\Component\HttpFoundation\Response;
  *     $ cd your-symfony-project/
  *     $ ./vendor/bin/phpunit
  */
-class DefaultControllerTest extends WebTestCase
+class DefaultControllerTest extends KernelTestCase
 {
+    use ResetDatabase, Factories, HasBrowser;
+
     /**
      * PHPUnit's data providers allow to execute the same tests repeated times
      * using a different set of data each time.
@@ -36,10 +40,7 @@ class DefaultControllerTest extends WebTestCase
      */
     public function testPublicUrls(string $url): void
     {
-        $client = static::createClient();
-        $client->request('GET', $url);
-
-        $this->assertResponseIsSuccessful(sprintf('The %s public URL loads correctly.', $url));
+        $this->kernelBrowser()->visit($url)->assertSuccessful();
     }
 
     /**
@@ -51,12 +52,12 @@ class DefaultControllerTest extends WebTestCase
      */
     public function testPublicBlogPost(): void
     {
-        $client = static::createClient();
-        // the service container is always available via the test client
-        $blogPost = $client->getContainer()->get('doctrine')->getRepository(Post::class)->find(1);
-        $client->request('GET', sprintf('/en/blog/posts/%s', $blogPost->getSlug()));
+        PostFactory::new()->create(['slug' => 'hello-world']);
 
-        $this->assertResponseIsSuccessful();
+        $this->kernelBrowser()
+            ->visit('/en/blog/posts/hello-world')
+            ->assertSuccessful()
+        ;
     }
 
     /**
@@ -68,14 +69,12 @@ class DefaultControllerTest extends WebTestCase
      */
     public function testSecureUrls(string $url): void
     {
-        $client = static::createClient();
-        $client->request('GET', $url);
+        PostFactory::findOrCreate(['id' => 1]);
 
-        $this->assertResponseRedirects(
-            'http://localhost/en/login',
-            Response::HTTP_FOUND,
-            sprintf('The %s secure URL redirects to the login form.', $url)
-        );
+        $this->kernelBrowser()
+            ->visit($url)
+            ->assertOn('http://localhost/en/login')
+        ;
     }
 
     public function getPublicUrls(): ?\Generator

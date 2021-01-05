@@ -11,9 +11,14 @@
 
 namespace App\Tests\Controller;
 
-use App\Entity\Post;
+use App\Factory\PostFactory;
+use App\Factory\UserFactory;
 use App\Pagination\Paginator;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\DomCrawler\Crawler;
+use Zenstruck\Browser\Test\HasBrowser;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
  * Functional test for the controllers defined inside BlogController.
@@ -25,29 +30,35 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  *     $ cd your-symfony-project/
  *     $ ./vendor/bin/phpunit
  */
-class BlogControllerTest extends WebTestCase
+class BlogControllerTest extends KernelTestCase
 {
+    use ResetDatabase, Factories, HasBrowser;
+
     public function testIndex(): void
     {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/en/blog/');
+        PostFactory::new()->createMany(15);
 
-        $this->assertResponseIsSuccessful();
-
-        $this->assertCount(
-            Paginator::PAGE_SIZE,
-            $crawler->filter('article.post'),
-            'The homepage displays the right number of posts.'
-        );
+        $this->kernelBrowser()
+            ->visit('/en/blog/')
+            ->assertSuccessful()
+            ->assertElementCount('article.post', Paginator::PAGE_SIZE)
+        ;
     }
 
     public function testRss(): void
     {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/en/blog/rss.xml');
+        PostFactory::new()->createMany(15);
 
-        $this->assertResponseHeaderSame('Content-Type', 'text/xml; charset=UTF-8');
+        $response = $this->kernelBrowser()
+            ->get('/en/blog/rss.xml')
+            ->assertHeaderEquals('Content-Type', 'text/xml; charset=UTF-8')
+            ->inner()->getResponse()
+        ;
 
+        // @todo besides adding a ->response() helper, maybe also add a ->crawler() helper? (Mink doesn't support XML responses)
+        $dom = new \DOMDocument();
+        $dom->loadXML($response->getContent());
+        $crawler = new Crawler($dom);
         $this->assertCount(
             Paginator::PAGE_SIZE,
             $crawler->filter('item'),
@@ -63,36 +74,33 @@ class BlogControllerTest extends WebTestCase
      */
     public function testNewComment(): void
     {
-        $client = static::createClient([], [
-            'PHP_AUTH_USER' => 'john_user',
-            'PHP_AUTH_PW' => 'kitten',
-        ]);
-        $client->followRedirects();
+        $user = UserFactory::new()->create()->object();
+        PostFactory::new()->create(['title' => 'Hello world']);
 
-        // Find first blog post
-        $crawler = $client->request('GET', '/en/blog/');
-        $postLink = $crawler->filter('article.post > h2 a')->link();
-
-        $client->click($postLink);
-        $crawler = $client->submitForm('Publish comment', [
-            'comment[content]' => 'Hi, Symfony!',
-        ]);
-
-        $newComment = $crawler->filter('.post-comment')->first()->filter('div > p')->text();
-
-        $this->assertSame('Hi, Symfony!', $newComment);
+        $this->kernelBrowser()->actingAs($user)
+            ->visit('/en/blog/posts/hello-world')
+            ->fillField('Content', 'Hi, Symfony!')
+            ->click('Publish comment')
+            ->assertSeeIn('.post-comment', 'Hi, Symfony!')
+        ;
     }
 
     public function testAjaxSearch(): void
     {
-        $client = static::createClient();
-        $client->xmlHttpRequest('GET', '/en/blog/search', ['q' => 'lorem']);
+        PostFactory::new()->create([
+            'title' => 'Lorem ipsum dolor sit amet consectetur adipiscing elit',
+            'author' => UserFactory::new()->create(['fullName' => 'Jane Doe']),
+        ]);
 
-        $results = json_decode($client->getResponse()->getContent(), true);
-
-        $this->assertResponseHeaderSame('Content-Type', 'application/json');
-        $this->assertCount(1, $results);
-        $this->assertSame('Lorem ipsum dolor sit amet consectetur adipiscing elit', $results[0]['title']);
-        $this->assertSame('Jane Doe', $results[0]['author']);
+        $this->kernelBrowser()
+            ->get('/en/blog/search', [
+                // @todo rename "parameters" to "query" to be consistent with Symfony's naming?
+                'parameters' => ['q' => 'Lorem'],
+                'ajax' => true,
+            ])
+            ->assertJson()
+            ->assertJsonMatches('[0].title', 'Lorem ipsum dolor sit amet consectetur adipiscing elit')
+            ->assertJsonMatches('[0].author', 'Jane Doe')
+        ;
     }
 }

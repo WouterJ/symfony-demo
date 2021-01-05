@@ -2,10 +2,10 @@
 
 <!-- https://phpunit.readthedocs.io/en/latest/configuration.html -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="bin/.phpunit/phpunit.xsd"
-         backupGlobals="false"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          colors="true"
          bootstrap="tests/bootstrap.php"
+         printerClass="NunoMaduro\Collision\Adapters\Phpunit\Printer"
 >
     <php>
         <ini name="error_reporting" value="-1" />
@@ -21,15 +21,9 @@
         </testsuite>
     </testsuites>
 
-    <filter>
-        <whitelist>
-            <directory>src</directory>
-        </whitelist>
-    </filter>
-
-    <listeners>
+    <!--<listeners>
         <listener class="Symfony\Bridge\PhpUnit\SymfonyTestsListener" />
-    </listeners>
+    </listeners>-->
 
     <extensions>
         <!-- it begins a database transaction before every testcase and rolls it back after
