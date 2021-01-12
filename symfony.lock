@@ -174,6 +174,21 @@
     "nunomaduro/collision": {
         "version": "v4.3.0"
     },
+    "pestphp/pest": {
+        "version": "v1.0.0"
+    },
+    "pestphp/pest-plugin": {
+        "version": "v1.0.0"
+    },
+    "pestphp/pest-plugin-coverage": {
+        "version": "v1.0.0"
+    },
+    "pestphp/pest-plugin-expectations": {
+        "version": "v1.0.1"
+    },
+    "pestphp/pest-plugin-init": {
+        "version": "v1.0.0"
+    },
     "phar-io/manifest": {
         "version": "2.0.1"
     },
@@ -705,6 +720,9 @@
     },
     "zenstruck/browser": {
         "version": "1.x-dev"
+    },
+    "zenstruck/callback": {
+        "version": "v1.1.0"
     },
     "zenstruck/foundry": {
         "version": "v1.6.0"

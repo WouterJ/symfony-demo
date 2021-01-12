@@ -45,8 +45,7 @@
         "dama/doctrine-test-bundle": "^6.2",
         "doctrine/doctrine-fixtures-bundle": "^3.0",
         "friendsofphp/php-cs-fixer": "3.0.x-dev",
-        "nunomaduro/collision": "^5.1",
-        "phpunit/phpunit": "^9.5",
+        "pestphp/pest": "^1.0",
         "symfony/browser-kit": "^5.2",
         "symfony/css-selector": "^5.2",
         "symfony/debug-bundle": "^5.2",
@@ -69,6 +68,7 @@
         }
     },
     "autoload-dev": {
+        "files": ["tests/pest_browser.php", "tests/pest_symfony.php"],
         "psr-4": {
             "App\\Tests\\": "tests/"
         }

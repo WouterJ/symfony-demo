@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace App\Tests\Utils;
+namespace App\Tests\Unit\Utils;
 
 use App\Utils\Validator;
 use PHPUnit\Framework\TestCase;
