@@ -42,13 +42,13 @@
         "twig/markdown-extra": "^3.0"
     },
     "require-dev": {
+        "brianium/paratest": "^4.0",
         "dama/doctrine-test-bundle": "^6.2",
         "doctrine/doctrine-fixtures-bundle": "^3.0",
         "symfony/browser-kit": "^5.2",
         "symfony/css-selector": "^5.2",
         "symfony/debug-bundle": "^5.2",
         "symfony/maker-bundle": "^1.11",
-        "symfony/phpunit-bridge": "^5.2",
         "symfony/stopwatch": "^5.2",
         "symfony/web-profiler-bundle": "^5.2"
     },
